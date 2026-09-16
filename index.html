@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BIGREX — Video Editor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#050507;
+    --glass:rgba(255,255,255,.055);
+    --glass-border:rgba(255,255,255,.10);
+    --text:#f5f5f7;
+    --muted:#9a9aa3;
+    --violet:#7c5cff;
+    --cyan:#38e0ff;
+    --orange:#ff9f43;
+    --green:#30d158;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+
+  /* ---------- aurora background ---------- */
+  .aurora{position:fixed;inset:0;z-index:-2;overflow:hidden}
+  .blob{position:absolute;border-radius:50%;filter:blur(110px);opacity:.5;will-change:transform}
+  .b1{width:520px;height:520px;background:#5b2ee5;top:-160px;left:-120px;animation:drift1 22s ease-in-out infinite alternate}
+  .b2{width:460px;height:460px;background:#0e7490;bottom:-140px;right:-100px;animation:drift2 26s ease-in-out infinite alternate}
+  .b3{width:380px;height:380px;background:#b45309;top:38%;left:55%;opacity:.32;animation:drift3 30s ease-in-out infinite alternate}
+  @keyframes drift1{to{transform:translate(120px,90px) scale(1.15)}}
+  @keyframes drift2{to{transform:translate(-110px,-80px) scale(1.1)}}
+  @keyframes drift3{to{transform:translate(-140px,70px) scale(.9)}}
+  .grain{position:fixed;inset:0;z-index:-1;opacity:.05;pointer-events:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+
+  /* ---------- cursor glow ---------- */
+  .glow{position:fixed;width:340px;height:340px;border-radius:50%;pointer-events:none;z-index:0;
+    background:radial-gradient(circle,rgba(124,92,255,.14),transparent 65%);
+    transform:translate(-50%,-50%);transition:opacity .3s}
+
+  /* ---------- layout ---------- */
+  .wrap{position:relative;z-index:1;max-width:480px;margin:0 auto;padding:64px 20px 80px}
+
+  /* ---------- hero ---------- */
+  .hero{text-align:center;margin-bottom:40px}
+  .avatar{width:104px;height:104px;margin:0 auto 18px;border-radius:50%;padding:3px;position:relative;
+    background:conic-gradient(from 180deg,var(--violet),var(--cyan),var(--orange),var(--violet));
+    animation:spin 7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .avatar-inner{width:100%;height:100%;border-radius:50%;background:#0b0b10;display:flex;
+    align-items:center;justify-content:center;font-family:'Space Grotesk';font-size:34px;font-weight:700;
+    animation:spin 7s linear infinite reverse}
+  .status{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:999px;
+    background:color-mix(in srgb,var(--green) 12%,transparent);
+    border:1px solid color-mix(in srgb,var(--green) 30%,transparent);
+    color:var(--green);font-size:13px;font-weight:500;margin-bottom:16px}
+  .status .dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 1.6s ease-in-out infinite}
+  @keyframes pulse{50%{opacity:.3;transform:scale(.8)}}
+  h1{font-family:'Space Grotesk';font-size:40px;font-weight:700;letter-spacing:.5px;line-height:1.1;
+    background:linear-gradient(120deg,#fff 30%,#b7a8ff 70%,#7ee7ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .handle{color:var(--muted);font-size:15px;margin:6px 0 12px}
+  .bio{color:var(--muted);font-size:15px;line-height:1.6;max-width:340px;margin:0 auto}
+
+  /* ---------- section titles ---------- */
+  .sec-label{display:flex;align-items:center;gap:12px;margin:34px 0 16px;color:var(--muted);
+    font-size:12px;font-weight:600;letter-spacing:2.5px;text-transform:uppercase}
+  .sec-label::before,.sec-label::after{content:"";flex:1;height:1px;background:var(--glass-border)}
+
+  /* ---------- price cards ---------- */
+  .card{background:var(--glass);border:1px solid var(--glass-border);border-radius:20px;
+    padding:20px;margin-bottom:14px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+    display:flex;align-items:center;gap:16px;cursor:pointer;position:relative;overflow:hidden;
+    opacity:0;transform:translateY(24px);transition:opacity .6s var(--e),transform .6s var(--e),border-color .3s,background .3s}
+  .card.visible{opacity:1;transform:none}
+  .card:hover{border-color:rgba(255,255,255,.22);background:rgba(255,255,255,.08)}
+  .card::after{content:"";position:absolute;inset:0;opacity:0;transition:opacity .35s;pointer-events:none;
+    background:radial-gradient(280px circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,.09),transparent 60%)}
+  .card:hover::after{opacity:1}
+  .icon{width:48px;height:48px;border-radius:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+  .i1{background:color-mix(in srgb,var(--violet) 18%,transparent)}
+  .i2{background:color-mix(in srgb,var(--cyan) 15%,transparent)}
+  .i3{background:color-mix(in srgb,var(--orange) 16%,transparent)}
+  .i4{background:color-mix(in srgb,var(--green) 15%,transparent)}
+  .card-body{flex:1;min-width:0}
+  .card-title{font-family:'Space Grotesk';font-size:17px;font-weight:600}
+  .card-desc{color:var(--muted);font-size:13px;margin-top:3px;line-height:1.45}
+  .price{font-family:'Space Grotesk';font-size:18px;font-weight:700;white-space:nowrap;
+    padding:8px 14px;border-radius:12px;background:rgba(255,255,255,.07);border:1px solid var(--glass-border)}
+  .copy-hint{position:absolute;right:20px;bottom:8px;font-size:11px;color:var(--muted);opacity:0;transition:opacity .3s}
+  .card:hover .copy-hint{opacity:.7}
+
+  /* ---------- buttons ---------- */
+  .btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:17px;
+    border-radius:16px;font-family:'Space Grotesk';font-size:16px;font-weight:600;text-decoration:none;
+    margin-bottom:14px;transition:transform .25s var(--e),box-shadow .25s;position:relative;overflow:hidden}
+  .btn:active{transform:scale(.97)}
+  .btn-telegram{color:#fff;background:linear-gradient(120deg,#2AABEE,#1d8fd1);box-shadow:0 8px 30px rgba(42,171,238,.28)}
+  .btn-telegram:hover{transform:translateY(-2px);box-shadow:0 14px 40px rgba(42,171,238,.4)}
+  .btn-dm{color:var(--text);background:var(--glass);border:1px solid var(--glass-border);backdrop-filter:blur(20px)}
+  .btn-dm:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.25)}
+  .btn svg{flex-shrink:0}
+
+  .note{text-align:center;color:var(--muted);font-size:13px;margin-top:6px}
+  .note a{color:var(--cyan);text-decoration:none}
+  footer{text-align:center;color:#55555e;font-size:12px;margin-top:44px;letter-spacing:1px}
+
+  :root{--e:cubic-bezier(.22,1,.36,1)}
+  @media (max-width:400px){h1{font-size:34px}.price{font-size:16px}}
+</style>
+</head>
+<body>
+
+<div class="aurora"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
+<div class="grain"></div>
+<div class="glow" id="glow"></div>
+
+<main class="wrap">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="avatar"><div class="avatar-inner">BR</div></div>
+    <div class="status"><span class="dot"></span> Accepting commissions</div>
+    <h1>BIGREX</h1>
+    <p class="handle">@rex4u_</p>
+    <p class="bio">Video editor crafting velocity edits, typography, mograph & song promos. DM to book a slot.</p>
+  </section>
+
+  <!-- PRICES -->
+  <div class="sec-label">Services &amp; prices</div>
+
+  <div class="card">
+    <div class="icon i1">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    </div>
+    <div class="card-body">
+      <div class="card-title">Velocity / Phonk edits</div>
+      <div class="card-desc">Fast-paced, beat-synced hype edits</div>
+    </div>
+    <div class="price">₦8,000</div>
+    <span class="copy-hint">click to copy</span>
+  </div>
+
+  <div class="card">
+    <div class="icon i2">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#38e0ff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 17 12 17"/><line x1="4" y1="12" x2="9" y2="12"/><polyline points="15 7 21 7 21 17 15 17"/><line x1="15" y1="12" x2="20" y2="12"/></svg>
+    </div>
+    <div class="card-body">
+      <div class="card-title">Typography edits</div>
+      <div class="card-desc">Kinetic type &amp; lyric-style visuals</div>
+    </div>
+    <div class="price">₦18,000</div>
+    <span class="copy-hint">click to copy</span>
+  </div>
+
+  <div class="card">
+    <div class="icon i3">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ff9f43" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/></svg>
+    </div>
+    <div class="card-body">
+      <div class="card-title">Mograph</div>
+      <div class="card-desc">Full motion graphics &amp; animation</div>
+    </div>
+    <div class="price">₦40,000</div>
+    <span class="copy-hint">click to copy</span>
+  </div>
+
+  <div class="card">
+    <div class="icon i4">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#30d158" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V6l12-2v12"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+    </div>
+    <div class="card-body">
+      <div class="card-title">Song promo</div>
+      <div class="card-desc">Promo video per release</div>
+    </div>
+    <div class="price">₦10,000</div>
+    <span class="copy-hint">click to copy</span>
+  </div>
+
+  <!-- LINKS -->
+  <div class="sec-label">Connect</div>
+
+  <a class="btn btn-telegram" href="https://t.me/bigrex_11" target="_blank" rel="noopener">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M11.94 2a10 10 0 1 0 .12 20A10 10 0 0 0 11.94 2zm4.97 6.84-1.68 7.9c-.12.56-.45.7-.92.44l-2.55-1.88-1.23 1.19c-.14.13-.25.25-.52.25l.18-2.6 4.72-4.26c.2-.18-.05-.29-.32-.1l-5.83 3.67-2.51-.78c-.55-.17-.56-.55.11-.81l9.83-3.79c.46-.17.86.1.72.77z"/></svg>
+    Free editing resources channel
+  </a>
+
+  <a class="btn btn-dm" href="https://t.me/bigrex_1" target="_blank" rel="noopener">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+    DM to book a slot
+  </a>
+
+  <p class="note">Prices are per video · DM for bundles &amp; custom work</p>
+
+  <footer>BIGREX © 2026 — MADE FOR EDITORS</footer>
+</main>
+
+<script>
+  // cursor glow (desktop only)
+  const glow = document.getElementById('glow');
+  if (matchMedia('(pointer:fine)').matches) {
+    addEventListener('mousemove', e => { glow.style.left = e.clientX + 'px'; glow.style.top = e.clientY + 'px'; });
+  } else { glow.style.display = 'none'; }
+
+  // scroll reveal
+  const io = new IntersectionObserver(entries => {
+    entries.forEach((en, i) => { if (en.isIntersecting) {
+      en.target.style.transitionDelay = (i * 60) + 'ms';
+      en.target.classList.add('visible'); io.unobserve(en.target);
+    }});
+  }, { threshold: .15 });
+  document.querySelectorAll('.card').forEach(c => io.observe(c));
+
+  // spotlight follows cursor on cards
+  document.querySelectorAll('.card').forEach(card => {
+    card.addEventListener('mousemove', e => {
+      const r = card.getBoundingClientRect();
+      card.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+      card.style.setProperty('--my', (e.clientY - r.top) + 'px');
+    });
+    // click to copy price
+    card.addEventListener('click', () => {
+      const price = card.querySelector('.price').textContent.trim();
+      navigator.clipboard.writeText(price).then(() => {
+        const hint = card.querySelector('.copy-hint');
+        hint.textContent = 'copied!';
+        hint.style.opacity = 1;
+        setTimeout(() => { hint.textContent = 'click to copy'; hint.style.opacity = ''; }, 1200);
+      });
+    });
+  });
+</script>
+</body>
+</html>
